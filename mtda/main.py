@@ -90,7 +90,7 @@ class MultiTenantDeviceAccess:
         self._writer_data = None
         self.blksz = CONSTS.WRITER.READ_SIZE
         self.usb_switches = []
-        self.ctrlport = 5556
+        self.ctrlport = 9000
         self.conport = 5557
         self.prefix_key = self._prefix_key_code(DEFAULT_PREFIX_KEY)
         self.is_remote = False
