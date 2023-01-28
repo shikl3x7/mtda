@@ -308,8 +308,8 @@ class Client:
         return self._impl.target_locked(self._session)
 
     async def _target_off(self):
-        async with WebSocketRpcClient("ws://134.86.254.23:9000/ws", RpcMethodsBase()) as self.client:
-            res = await self.client.other.target_off(session=self._session)
+        async with self._impl:
+            res = await self._impl.other.target_off(session=self._session)
             return res.result
 
     def target_off(self):
