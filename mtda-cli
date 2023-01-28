@@ -25,6 +25,7 @@ import socket
 import zeroconf
 import uvicorn
 import sys
+import asyncio
 from fastapi import FastAPI
 from fastapi_websocket_rpc import RpcMethodsBase, WebsocketRPCEndpoint
 

@@ -30,6 +30,7 @@ class Client:
         if agent.remote is not None:
             uri = "ws://%s:%d/ws" % (agent.remote, agent.ctrlport)
             self._impl =  WebSocketRpcClient(uri, RpcMethodsBase())
+            self.loop = asyncio.get_event_loop()
             #self._impl.connect(uri)
         else:
             self._impl = agent
@@ -306,9 +307,12 @@ class Client:
     def target_locked(self):
         return self._impl.target_locked(self._session)
 
-    async def target_off(self):
-        response = await self._impl.other.target_off(self_session) 
-        return self._impl.target_off(self._session)
+    async def _target_off(self):
+        async with WebSocketRpcClient("ws://134.86.254.23:9000/ws", RpcMethodsBase()) as self.client:
+            res = await self.client.other.target_on(session=self._session)
+
+    def target_off(self):
+        return self.loop.run_until_complete(self._target_off())
 
     def target_on(self):
         return self._impl.target_on(self._session)
