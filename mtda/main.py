@@ -982,7 +982,7 @@ class MultiTenantDeviceAccess:
         self.mtda.debug(3, "main._target_off(): {}".format(result))
         return result
 
-    def target_off(self, session=None):
+    async def target_off(self, session=None):
         self.mtda.debug(3, "main.target_off()")
 
         result = True
