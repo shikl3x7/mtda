@@ -309,7 +309,8 @@ class Client:
 
     async def _target_off(self):
         async with WebSocketRpcClient("ws://134.86.254.23:9000/ws", RpcMethodsBase()) as self.client:
-            res = await self.client.other.target_on(session=self._session)
+            res = await self.client.other.target_off(session=self._session)
+            return res.result
 
     def target_off(self):
         return self.loop.run_until_complete(self._target_off())
