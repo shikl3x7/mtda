@@ -314,9 +314,14 @@ class Client:
 
     def target_off(self):
         return self.loop.run_until_complete(self._target_off())
-    
+
+    async def _target_on(self):
+        async with self._impl:
+            res = await self._impl.other.target_on(session=self._session)
+            return res.result
+   
     def target_on(self):
-        return self._impl.target_on(self._session)
+        return self.loop.run_until_complete(self._target_on())
 
     def target_status(self):
         return self._impl.target_status(self._session)

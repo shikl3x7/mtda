@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 import zmq
-
+from fastapi_websocket_rpc import RpcMethodsBase
 # Local imports
 from mtda.console.input import ConsoleInput
 from mtda.console.logger import ConsoleLogger
@@ -56,7 +56,7 @@ def _make_printable(s):
     return s.translate(_NOPRINT_TRANS_TABLE)
 
 
-class MultiTenantDeviceAccess:
+class MultiTenantDeviceAccess(RpcMethodsBase):
 
     def __init__(self):
         self.config_files = ['mtda.ini']
@@ -923,7 +923,7 @@ class MultiTenantDeviceAccess:
         self.mtda.debug(3, "main._target_on(): {}".format(result))
         return result
 
-    def target_on(self, session=None):
+    async def target_on(self, session=None):
         self.mtda.debug(3, "main.target_on()")
 
         result = True
