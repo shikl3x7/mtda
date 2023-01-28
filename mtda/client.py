@@ -313,7 +313,7 @@ class Client:
 
     def target_off(self):
         return self.loop.run_until_complete(self._target_off())
-
+    
     def target_on(self):
         return self._impl.target_on(self._session)
 
