@@ -15,6 +15,8 @@ import random
 import socket
 import time
 import zerorpc
+import asyncio
+from fastapi_websocket_rpc import RpcMethodsBase, WebSocketRpcClient
 
 from mtda.main import MultiTenantDeviceAccess
 import mtda.constants as CONSTS
@@ -26,10 +28,9 @@ class Client:
         agent = MultiTenantDeviceAccess()
         agent.load_config(host, config_files=config_files)
         if agent.remote is not None:
-            uri = "tcp://%s:%d" % (agent.remote, agent.ctrlport)
-            self._impl = zerorpc.Client(heartbeat=CONSTS.RPC.HEARTBEAT,
-                                        timeout=CONSTS.RPC.TIMEOUT)
-            self._impl.connect(uri)
+            uri = "ws://%s:%d/ws" % (agent.remote, agent.ctrlport)
+			self._impl =  WebSocketRpcClient(uri, RpcMethodsBase())
+            #self._impl.connect(uri)
         else:
             self._impl = agent
         self._agent = agent
@@ -306,6 +307,7 @@ class Client:
         return self._impl.target_locked(self._session)
 
     def target_off(self):
+		response = await self._impl.other.target_off(self_session) 
         return self._impl.target_off(self._session)
 
     def target_on(self):
