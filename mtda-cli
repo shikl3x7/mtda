@@ -23,6 +23,11 @@ import sys
 import zerorpc
 import socket
 import zeroconf
+import uvicorn
+import sys
+import asyncio
+from fastapi import FastAPI
+from fastapi_websocket_rpc import RpcMethodsBase, WebsocketRPCEndpoint
 
 # Local imports
 from mtda.main import MultiTenantDeviceAccess
@@ -73,11 +78,10 @@ class Application:
         if status is False:
             return False
 
-        # Start our RPC server
-        uri = "tcp://*:%d" % (self.agent.ctrlport)
-        s = zerorpc.Server(self.agent, heartbeat=20)
-        s.bind(uri)
-
+        # Start our Fast-API server
+        app =  FastAPI()
+        endpoint = WebsocketRPCEndpoint(self.agent)
+        endpoint.register_route(app, "/ws")
         # Initialize ZeroConf
         interfaces = zeroconf.InterfaceChoice.All
         zc = zeroconf.Zeroconf(interfaces=interfaces)
@@ -96,9 +100,8 @@ class Application:
 
         zc.register_service(info)
         try:
-            s.run()
+            uvicorn.run(app,host='0.0.0.0',port=self.agent.ctrlport)
         except KeyboardInterrupt:
-            s.stop()
             self.agent.stop()
         finally:
             zc.unregister_service(info)

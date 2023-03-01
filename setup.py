@@ -63,6 +63,7 @@ and testers to remotely access and control hardware devices.
         "zerorpc>=0.6.0",
         "zstandard>=0.14",
         "zeroconf>=0.28.6",
+        "uvicorn>=0.20.0",
         "fastapi>=0.88.0",
         "fastapi-websocket-rpc>=0.1.23"
     ],
