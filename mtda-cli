@@ -583,7 +583,7 @@ class Application:
 
     def target_uptime(self):
         result = ""
-        uptime = self.client().target_uptime()
+        uptime = eval(self.client().target_uptime())
         days = int(uptime / (24 * 60 * 60.0))
         if days > 0:
             result = result + " %d days" % int(days)
@@ -610,15 +610,15 @@ class Application:
         locked = " (locked)" if client.target_locked() else ""
         remote = "Local" if self.remote is None else self.remote
         session = client.session()
-        storage_status, writing, written = client.storage_status()
+        storage_status, writing, written = eval(client.storage_status())
         writing = "WRITING" if writing is True else "IDLE"
         written = self._human_readable_size(written)
         tgt_status = client.target_status()
         uptime = ""
         if tgt_status == "ON":
-            uptime = " (up %s)" % self.target_uptime()
+            uptime = " (up %s)"%(self.target_uptime())
         try:
-            remote_version = client.agent_version()
+            remote_version = eval(client.agent_version())
         except (zerorpc.RemoteError) as e:
             if e.name == 'NameError':
                 remote_version = "<=0.5"
@@ -640,7 +640,7 @@ class Application:
         print("Storage writes : %s (%s)\r" % (written, writing))
 
         # Print status of the USB ports
-        ports = client.usb_ports()
+        ports = eval(client.usb_ports())
         for ndx in range(0, ports):
             status = client.usb_status(ndx+1)
             print("USB #%-2d        : %s\r" % (ndx+1, status))

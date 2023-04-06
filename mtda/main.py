@@ -22,6 +22,7 @@ import threading
 import time
 import zmq
 from fastapi_websocket_rpc import RpcMethodsBase
+import redis
 # Local imports
 from mtda.console.input import ConsoleInput
 from mtda.console.logger import ConsoleLogger
@@ -62,6 +63,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.config_files = ['mtda.ini']
         self.console = None
         self.socket = None
+        self.redis_socket = None
         self.console_logger = None
         self.monitor = None
         self.monitor_logger = None
@@ -120,7 +122,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         if os.path.exists('/etc'):
             self.config_files.append(os.path.join('/etc', 'mtda', 'config'))
 
-    def agent_version(self):
+    async def agent_version(self):
         return self.version
 
     def command(self, args, session=None):
@@ -140,7 +142,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         result = True
         storage = self.storage_controller
         if storage is not None and storage.variant == 'usbf':
-            status, _, _ = self.storage_status()
+            status, _, _ = self._storage_status()
             enabled = status == CONSTS.STORAGE.ON_TARGET
             self.mtda.debug(3, "main._composite_start(): "
                                "with storage? {}".format(enabled))
@@ -361,7 +363,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.mtda.debug(3, "main.console_run(): %s" % str(result))
         return result
 
-    def console_send(self, data, raw=False, session=None):
+    async def console_send(self, data=None, raw=False, session=None):
         self.mtda.debug(3, "main.console_send()")
 
         self._session_check(session)
@@ -484,7 +486,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.mtda.debug(3, "main.monitor_remote(): %s" % str(result))
         return result
 
-    def monitor_send(self, data, raw=False, session=None):
+    async def monitor_send(self, data, raw=False, session=None):
         self.mtda.debug(3, "main.monitor_send()")
 
         self._session_check(session)
@@ -536,6 +538,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
             with self._socket_lock:
                 self.socket.send(topic, flags=zmq.SNDMORE)
                 self.socket.send(data)
+                self.redis_socket.publish(topic,data)
 
     def _storage_event(self, status):
         self.notify(CONSTS.EVENTS.STORAGE, status)
@@ -598,7 +601,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
             self.mtda.debug(4, "storage_locked(): no power controller")
             result = True
         # The target shall be OFF
-        elif self.target_status() != "OFF":
+        elif self._target_status() != "OFF":
             self.mtda.debug(4, "storage_locked(): target isn't off")
             result = True
         # Lastly, the shared storage device shall not be opened
@@ -675,8 +678,23 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
 
         self.mtda.debug(3, "main.storage_open(): %s" % str(result))
         return result
+    
+    def _storage_status(self, session=None):
+        self.mtda.debug(3, "main.storage_status()")
 
-    def storage_status(self, session=None):
+        self._session_check(session)
+        if self.storage_controller is None:
+            self.mtda.debug(4, "storage_status(): no shared storage device")
+            result = CONSTS.STORAGE.UNKNOWN, False, 0
+        else:
+            status = self.storage_controller.status()
+            result = status, self._writer.writing, self._writer.written
+
+        self.mtda.debug(3, "main.storage_status(): %s" % str(result))
+        return result
+
+
+    async def storage_status(self, session=None):
         self.mtda.debug(3, "main.storage_status()")
 
         self._session_check(session)
@@ -824,7 +842,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.mtda.debug(3, "main.target_lock(): %s" % str(result))
         return result
 
-    def target_locked(self, session):
+    async def target_locked(self, session):
         self.mtda.debug(3, "main.target_locked()")
 
         self._session_check(session)
@@ -1008,7 +1026,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.mtda.debug(3, "main._target_status(): {}".format(result))
         return result
 
-    def target_status(self, session=None):
+    async def target_status(self, session=None):
         self.mtda.debug(3, "main.target_status()")
 
         with self._power_lock:
@@ -1051,7 +1069,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         self.mtda.debug(3, "main.target_unlock(): %s" % str(result))
         return result
 
-    def target_uptime(self, session=None):
+    async def target_uptime(self, session=None):
         self.mtda.debug(3, "main.target_uptime()")
 
         result = 0
@@ -1121,15 +1139,14 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
             return usb_switch.on()
         return False
 
-    def usb_ports(self, session=None):
+    async def usb_ports(self, session=None):
         self.mtda.debug(3, "main.usb_ports()")
 
         self._session_check(session)
         return len(self.usb_switches)
 
-    def usb_status(self, ndx, session=None):
+    async def usb_status(self, ndx, session=None):
         self.mtda.debug(3, "main.usb_status()")
-
         self._session_check(session)
         try:
             if ndx > 0:
@@ -1148,7 +1165,6 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
 
     def usb_toggle(self, ndx, session=None):
         self.mtda.debug(3, "main.usb_toggle()")
-
         self._session_check(session)
         try:
             if ndx > 0:
@@ -1157,7 +1173,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         except IndexError:
             print("invalid USB switch #" + str(ndx), file=sys.stderr)
 
-    def video_url(self, host="", opts=None):
+    async def video_url(self, host="", opts=None):
         self.mtda.debug(3, "main.video_url(host={0}, "
                            "opts={1})".format(host, opts))
 
@@ -1511,6 +1527,7 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
             with self._socket_lock:
                 self.socket.send(CONSTS.CHANNEL.EVENTS, flags=zmq.SNDMORE)
                 self.socket.send_string("{} {}".format(what, info))
+                self.redis_socket.publish(CONSTS.CHANNEL.EVENTS,"{} {}".format(what,info))
         if self._www is not None:
             self._www.notify(what, info)
 
@@ -1541,12 +1558,15 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
         if self.console is not None:
             # Create a publisher
             if self.is_server is True:
+                redis_client = redis.Redis(host='134.86.254.21', port=6379, db=0)
                 context = zmq.Context()
                 socket = context.socket(zmq.PUB)
                 socket.bind("tcp://*:%s" % self.conport)
             else:
                 socket = None
+                redis_client = None
             self.socket = socket
+            self.redis_socket = redis_client
 
             # Create and start console logger
             status = self.console.probe()
@@ -1649,6 +1669,8 @@ class MultiTenantDeviceAccess(RpcMethodsBase):
 
         if self.socket is not None:
             self.socket.close()
+            self.redis_socket.quit()
+            self.redis_socket = None
             self.socket = None
 
     def _session_check(self, session=None):

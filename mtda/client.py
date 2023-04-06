@@ -52,9 +52,14 @@ class Client:
             self._session = os.getenv('MTDA_SESSION', name)
         else:
             self._session = session
+    
+    async def _agent_version(self):
+        async with self._impl:
+            res = await self._impl.other.agent_version()
+            return res.result
 
     def agent_version(self):
-        return self._impl.agent_version()
+        return self.loop.run_until_complete(self._agent_version())
 
     def config_set_power_timeout(self, timeout):
         return self._impl.config_set_power_timeout(timeout, self._session)
@@ -104,8 +109,13 @@ class Client:
     def console_run(self, cmd):
         return self._impl.console_run(cmd, self._session)
 
+    async def _console_send(self,data,raw):
+        async with self._impl:
+            res = await self._impl.other.console_send(data=data,raw=raw,session=self._session)
+            return res.result
+
     def console_send(self, data, raw=False):
-        return self._impl.console_send(data, raw, self._session)
+        return self.loop.run_until_complete(self._console_send(data, raw))
 
     def console_toggle(self):
         return self._agent.console_toggle(self._session)
@@ -127,9 +137,14 @@ class Client:
 
     def monitor_remote(self, host, screen):
         return self._agent.monitor_remote(host, screen)
+    
+    async def _monitor_send(self,data,raw):
+        async with self._impl:
+            res = await self._impl.other.monitor_send(data=data,raw=raw,session=self._session)
+            return res.result
 
     def monitor_send(self, data, raw=False):
-        return self._impl.monitor_send(data, raw, self._session)
+        return self.loop.run_until_complete(self._monitor_send(data, raw))
 
     def monitor_wait(self, what, timeout=None):
         return self._impl.monitor_wait(what, timeout, self._session)
@@ -164,9 +179,15 @@ class Client:
                 return True
             time.sleep(1)
         return False
+    
+    async def _storage_status(self):
+        async with self._impl:
+            res = await self._impl.other.storage_status(session=self._session)
+            return res.result
 
     def storage_status(self):
-        return self._impl.storage_status(self._session)
+        return self.loop.run_until_complete(self._storage_status())
+
 
     def _storage_write(self, image, imgname, imgsize, callback=None):
         # Copy loop
@@ -304,9 +325,14 @@ class Client:
             time.sleep(60)
         return status
 
-    def target_locked(self):
-        return self._impl.target_locked(self._session)
+    async def _target_locked(self):
+        async with self._impl:
+            res = await self._impl.other.target_locked(session=self._session)
+            return res.result
 
+    def target_locked(self):
+        return self.loop.run_until_complete(self._target_locked())
+    
     async def _target_off(self):
         async with self._impl:
             res = await self._impl.other.target_off(session=self._session)
@@ -323,17 +349,27 @@ class Client:
     def target_on(self):
         return self.loop.run_until_complete(self._target_on())
 
+    async def _target_status(self):
+        async with self._impl:
+            res = await self._impl.other.target_status(session=self._session)
+            return res.result
+
     def target_status(self):
-        return self._impl.target_status(self._session)
+        return self.loop.run_until_complete(self._target_status())
 
     def target_toggle(self):
         return self._impl.target_toggle(self._session)
 
     def target_unlock(self):
         return self._impl.target_unlock(self._session)
-
+    
+    async def _target_uptime(self):
+        async with self._impl:
+            res = await self._impl.other.target_uptime(session=self._session)
+            return res.result
+   
     def target_uptime(self):
-        return self._impl.target_uptime(self._session)
+        return self.loop.run_until_complete(self._target_uptime())
 
     def toggle_timestamps(self):
         return self._impl.toggle_timestamps()
@@ -355,20 +391,35 @@ class Client:
 
     def usb_on_by_class(self, className):
         return self._impl.usb_on_by_class(className, self._session)
+    
+    async def _usb_ports(self):
+        async with self._impl:
+            res = await self._impl.other.usb_ports(session=self._session)
+            return res.result
 
     def usb_ports(self):
-        return self._impl.usb_ports(self._session)
+        return self.loop.run_until_complete(self._usb_ports())
+    
+    async def _usb_status(self,ndx):
+        async with self._impl:
+            res = await self._impl.other.usb_status(ndx,session=self._session)
+            return res.result
 
-    def usb_status(self, ndx):
-        return self._impl.usb_status(ndx, self._session)
+    def usb_status(self,ndx):
+        return self.loop.run_until_complete(self._usb_status(ndx))
 
     def usb_toggle(self, ndx):
         return self._impl.usb_toggle(ndx, self._session)
 
     def version(self):
         return self._agent.version
+    
+    async def _video_url(self,host,opts):
+        async with self._impl:
+            res = await self._impl.other.video_url(host=host,opts=opts)
+            return res.result
 
     def video_url(self, host="", opts=None):
         if host == "":
             host = os.getenv("MTDA_REMOTE", "")
-        return self._impl.video_url(host, opts)
+        return self.loop.run_until_complete(self._video_url(host,opts))
