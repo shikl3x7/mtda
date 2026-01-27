@@ -16,5 +16,5 @@ header:
   version: 17
   includes:
     - kas/common/base.yml
-    - kas/debian/bookworm-base.yml
+    - kas/debian/trixie-base.yml
     - kas/opt/ab-rootfs.yml
